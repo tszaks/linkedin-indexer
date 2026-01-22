@@ -118,6 +118,12 @@ export default function Home() {
           </div>
         )}
 
+        {loading && (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+          </div>
+        )}
+
         {!loading && connections.length === 0 && (
           <div className="text-center py-16 text-gray-500 dark:text-gray-400">
             <div className="text-5xl mb-4">🔍</div>
