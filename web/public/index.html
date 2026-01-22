@@ -179,6 +179,69 @@
                 color: #64acff;
             }
         }
+
+        /* Mobile optimizations */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+                padding-bottom: env(safe-area-inset-bottom, 20px);
+            }
+
+            header {
+                padding: 16px 0;
+                margin: -12px -12px 0 -12px;
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            h1 {
+                font-size: 22px;
+                margin-bottom: 16px;
+            }
+
+            input[type="text"] {
+                padding: 14px 16px 14px 44px;
+                font-size: 17px;
+                border-radius: 10px;
+            }
+
+            .card {
+                padding: 14px;
+                border-radius: 12px;
+                margin-bottom: 10px;
+            }
+
+            .card:active {
+                transform: scale(0.98);
+                background: #f0f0f5;
+            }
+
+            .name {
+                font-size: 16px;
+            }
+
+            .title {
+                font-size: 13px;
+            }
+
+            .company {
+                font-size: 13px;
+            }
+
+            .location {
+                font-size: 12px;
+            }
+
+            .empty {
+                padding: 40px 20px;
+            }
+        }
+
+        @media (max-width: 600px) and (prefers-color-scheme: dark) {
+            .card:active {
+                background: #3a3a3c;
+            }
+        }
     </style>
 </head>
 
