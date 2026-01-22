@@ -1,43 +1,35 @@
 // Popup script for configuration
 
-const apiUrlInput = document.getElementById('apiUrl');
-const apiKeyInput = document.getElementById('apiKey');
+const pocketbaseUrlInput = document.getElementById('pocketbaseUrl');
 const saveBtn = document.getElementById('saveBtn');
 const scanBtn = document.getElementById('scanBtn');
 const statusEl = document.getElementById('status');
 const syncCountEl = document.getElementById('syncCount');
-const webAppLink = document.getElementById('webAppLink');
+
+let sessionSyncCount = 0;
 
 // Load saved config
-chrome.storage.sync.get(['apiUrl', 'apiKey', 'syncCount'], (result) => {
-    apiUrlInput.value = result.apiUrl || '';
-    apiKeyInput.value = result.apiKey || '';
-    syncCountEl.textContent = result.syncCount || '0';
-
-    if (result.apiUrl) {
-        webAppLink.href = result.apiUrl;
-    }
-
-    updateStatus(result.apiUrl, result.apiKey);
+chrome.storage.sync.get(['pocketbaseUrl'], (result) => {
+    pocketbaseUrlInput.value = result.pocketbaseUrl || '';
+    updateStatus(result.pocketbaseUrl);
 });
 
-function updateStatus(url, key) {
-    if (url && key) {
-        statusEl.textContent = '✓ Connected to server';
+function updateStatus(url) {
+    if (url) {
+        statusEl.textContent = '✓ Connected to PocketBase';
         statusEl.className = 'status connected';
     } else {
-        statusEl.textContent = 'Not configured - add server details below';
+        statusEl.textContent = 'Not configured - add PocketBase URL below';
         statusEl.className = 'status disconnected';
     }
 }
 
 // Save configuration
 saveBtn.addEventListener('click', async () => {
-    const apiUrl = apiUrlInput.value.trim().replace(/\/$/, ''); // Remove trailing slash
-    const apiKey = apiKeyInput.value.trim();
+    const pocketbaseUrl = pocketbaseUrlInput.value.trim().replace(/\/$/, '');
 
-    if (!apiUrl || !apiKey) {
-        statusEl.textContent = '⚠ Please fill in both fields';
+    if (!pocketbaseUrl) {
+        statusEl.textContent = '⚠ Please enter the PocketBase URL';
         statusEl.className = 'status disconnected';
         return;
     }
@@ -47,28 +39,27 @@ saveBtn.addEventListener('click', async () => {
     statusEl.className = 'status';
 
     try {
-        const response = await fetch(`${apiUrl}/api/connections?count=true`);
+        const response = await fetch(`${pocketbaseUrl}/api/collections/connections/records?perPage=1`);
         if (!response.ok) throw new Error('Server not reachable');
 
         // Save config
-        chrome.storage.sync.set({ apiUrl, apiKey }, () => {
-            updateStatus(apiUrl, apiKey);
-            webAppLink.href = apiUrl;
+        chrome.storage.sync.set({ pocketbaseUrl }, () => {
+            updateStatus(pocketbaseUrl);
 
             // Update content script
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs[0]?.url?.includes('linkedin.com')) {
                     chrome.tabs.sendMessage(tabs[0].id, {
                         type: 'UPDATE_CONFIG',
-                        apiUrl,
-                        apiKey
+                        pocketbaseUrl
                     }).catch(() => { });
                 }
             });
         });
     } catch (error) {
-        statusEl.textContent = '✕ Could not connect to server';
+        statusEl.textContent = '✕ Could not connect to PocketBase';
         statusEl.className = 'status disconnected';
+        console.error('Connection test failed:', error);
     }
 });
 
@@ -84,6 +75,12 @@ scanBtn.addEventListener('click', async () => {
 
     try {
         chrome.tabs.sendMessage(tab.id, { type: 'FORCE_SCAN' }, (response) => {
+            if (chrome.runtime.lastError) {
+                statusEl.textContent = 'Refresh LinkedIn page and try again';
+                statusEl.className = 'status disconnected';
+                return;
+            }
+
             if (response?.found) {
                 statusEl.textContent = `Found ${response.found} new connection(s)`;
                 statusEl.className = 'status connected';
@@ -98,13 +95,10 @@ scanBtn.addEventListener('click', async () => {
     }
 });
 
-// Listen for sync updates
+// Listen for sync updates from background
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'SYNC_COMPLETE') {
-        chrome.storage.sync.get(['syncCount'], (result) => {
-            const newCount = (result.syncCount || 0) + message.count;
-            chrome.storage.sync.set({ syncCount: newCount });
-            syncCountEl.textContent = newCount;
-        });
+        sessionSyncCount += message.count;
+        syncCountEl.textContent = sessionSyncCount;
     }
 });

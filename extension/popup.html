@@ -119,6 +119,12 @@
     .link:hover {
       text-decoration: underline;
     }
+
+    .hint {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
   </style>
 </head>
 
@@ -133,22 +139,19 @@
     </div>
 
     <div class="form-group">
-      <label>Server URL</label>
-      <input type="url" id="apiUrl" placeholder="https://your-app.railway.app">
+      <label>PocketBase URL</label>
+      <input type="url" id="pocketbaseUrl" placeholder="https://linkedin-indexer-production.up.railway.app">
+      <div class="hint">Your Railway PocketBase URL</div>
     </div>
 
-    <div class="form-group">
-      <label>API Key</label>
-      <input type="password" id="apiKey" placeholder="Your secret API key">
-    </div>
-
-    <button id="saveBtn" class="btn btn-primary">Save Configuration</button>
+    <button id="saveBtn" class="btn btn-primary">Save & Test Connection</button>
     <button id="scanBtn" class="btn btn-secondary">Scan Page Now</button>
 
     <div class="stats">
-      <div id="statsText">Connections synced: <span id="syncCount">0</span></div>
+      <div>Connections synced this session: <span id="syncCount">0</span></div>
       <div style="margin-top: 8px;">
-        <a id="webAppLink" href="#" target="_blank" class="link">Open Web Search →</a>
+        <a href="https://www.linkedin.com/mynetwork/invite-connect/connections/" target="_blank" class="link">Open
+          LinkedIn Connections →</a>
       </div>
     </div>
   </div>

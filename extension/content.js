@@ -1,18 +1,16 @@
-// Content script for scraping LinkedIn connections and syncing to server
+// Content script for scraping LinkedIn connections and syncing to PocketBase
 
 (function () {
     'use strict';
 
-    // Configuration - will be set from popup/options
-    let API_URL = '';  // Set this to your Railway URL
-    let API_KEY = '';  // Set this to your API key
+    // Configuration - will be set from popup
+    let POCKETBASE_URL = '';
 
     // Load config from storage
-    chrome.storage.sync.get(['apiUrl', 'apiKey'], (result) => {
-        API_URL = result.apiUrl || '';
-        API_KEY = result.apiKey || '';
-        if (API_URL) {
-            console.log('[LinkedIn Indexer] Config loaded, API URL:', API_URL);
+    chrome.storage.sync.get(['pocketbaseUrl'], (result) => {
+        POCKETBASE_URL = result.pocketbaseUrl || '';
+        if (POCKETBASE_URL) {
+            console.log('[LinkedIn Indexer] Config loaded, PocketBase URL:', POCKETBASE_URL);
         }
     });
 
@@ -84,36 +82,49 @@
         return { title, company };
     }
 
-    async function syncToServer(connections) {
-        if (!API_URL || !API_KEY) {
-            console.log('[LinkedIn Indexer] API not configured, skipping sync');
+    async function syncToPocketBase(connections) {
+        if (!POCKETBASE_URL) {
+            console.log('[LinkedIn Indexer] PocketBase URL not configured, skipping sync');
             return false;
         }
 
-        try {
-            const response = await fetch(`${API_URL}/api/connections`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': API_KEY
-                },
-                body: JSON.stringify(connections)
-            });
+        let successCount = 0;
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+        for (const conn of connections) {
+            try {
+                // First check if exists
+                const searchResponse = await fetch(
+                    `${POCKETBASE_URL}/api/collections/connections/records?filter=(profile_url='${encodeURIComponent(conn.profile_url)}')`
+                );
+                const searchData = await searchResponse.json();
+
+                if (searchData.items && searchData.items.length > 0) {
+                    // Update existing
+                    const existingId = searchData.items[0].id;
+                    await fetch(`${POCKETBASE_URL}/api/collections/connections/records/${existingId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(conn)
+                    });
+                } else {
+                    // Create new
+                    await fetch(`${POCKETBASE_URL}/api/collections/connections/records`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(conn)
+                    });
+                }
+                successCount++;
+            } catch (error) {
+                console.error('[LinkedIn Indexer] Error syncing connection:', error);
             }
-
-            const result = await response.json();
-            console.log(`[LinkedIn Indexer] Synced ${result.count} connections to server`);
-            return true;
-        } catch (error) {
-            console.error('[LinkedIn Indexer] Sync failed:', error);
-            return false;
         }
+
+        console.log(`[LinkedIn Indexer] Synced ${successCount}/${connections.length} connections`);
+        return successCount > 0;
     }
 
-    function scheduleSyncToServer() {
+    function scheduleSyncToPocketBase() {
         if (syncTimeout) {
             clearTimeout(syncTimeout);
         }
@@ -123,7 +134,7 @@
                 const toSync = [...pendingConnections];
                 pendingConnections = [];
 
-                const success = await syncToServer(toSync);
+                const success = await syncToPocketBase(toSync);
                 if (!success) {
                     // Put back in queue if failed
                     pendingConnections.push(...toSync);
@@ -136,7 +147,7 @@
                     success
                 }).catch(() => { });
             }
-        }, 2000); // Batch and sync every 2 seconds
+        }, 2000);
     }
 
     function scanForConnections() {
@@ -157,7 +168,7 @@
 
         if (newCount > 0) {
             console.log(`[LinkedIn Indexer] Found ${newCount} new connections`);
-            scheduleSyncToServer();
+            scheduleSyncToPocketBase();
         }
 
         return newCount;
@@ -198,14 +209,13 @@
             sendResponse({
                 processed: processedUrls.size,
                 pending: pendingConnections.length,
-                configured: !!(API_URL && API_KEY)
+                configured: !!POCKETBASE_URL
             });
             return true;
         }
 
         if (message.type === 'UPDATE_CONFIG') {
-            API_URL = message.apiUrl || '';
-            API_KEY = message.apiKey || '';
+            POCKETBASE_URL = message.pocketbaseUrl || '';
             sendResponse({ success: true });
             return true;
         }
