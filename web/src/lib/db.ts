@@ -21,7 +21,7 @@ export interface Connection {
     updated?: string;
 }
 
-// Search connections
+// Search connections_v2
 export async function searchConnections(query: string): Promise<Connection[]> {
     try {
         const pb = getPocketBase();
@@ -37,28 +37,28 @@ export async function searchConnections(query: string): Promise<Connection[]> {
             filter = conditions.join(' && ');
         }
 
-        const records = await pb.collection('connections').getFullList<Connection>({
+        const records = await pb.collection('connections_v2').getFullList<Connection>({
             filter,
             sort: 'name',
         });
 
         return records;
     } catch (error) {
-        console.error('Error searching connections:', error);
+        console.error('Error searching connections_v2:', error);
         return [];
     }
 }
 
-// Get all connections
+// Get all connections_v2
 export async function getAllConnections(): Promise<Connection[]> {
     try {
         const pb = getPocketBase();
-        const records = await pb.collection('connections').getFullList<Connection>({
+        const records = await pb.collection('connections_v2').getFullList<Connection>({
             sort: 'name',
         });
         return records;
     } catch (error) {
-        console.error('Error getting connections:', error);
+        console.error('Error getting connections_v2:', error);
         return [];
     }
 }
@@ -67,7 +67,7 @@ export async function getAllConnections(): Promise<Connection[]> {
 export async function getConnectionCount(): Promise<number> {
     try {
         const pb = getPocketBase();
-        const result = await pb.collection('connections').getList(1, 1);
+        const result = await pb.collection('connections_v2').getList(1, 1);
         return result.totalItems;
     } catch (error) {
         console.error('Error getting count:', error);
@@ -80,16 +80,16 @@ export async function upsertConnection(connection: Connection): Promise<Connecti
     try {
         const pb = getPocketBase();
         // Check if exists
-        const existing = await pb.collection('connections').getFirstListItem(
+        const existing = await pb.collection('connections_v2').getFirstListItem(
             `profile_url = "${connection.profile_url.replace(/"/g, '\\"')}"`
         ).catch(() => null);
 
         if (existing) {
             // Update
-            return await pb.collection('connections').update<Connection>(existing.id, connection);
+            return await pb.collection('connections_v2').update<Connection>(existing.id, connection);
         } else {
             // Create
-            return await pb.collection('connections').create<Connection>(connection);
+            return await pb.collection('connections_v2').create<Connection>(connection);
         }
     } catch (error) {
         console.error('Error upserting connection:', error);
@@ -97,11 +97,11 @@ export async function upsertConnection(connection: Connection): Promise<Connecti
     }
 }
 
-// Bulk upsert connections
-export async function upsertConnections(connections: Connection[]): Promise<number> {
+// Bulk upsert connections_v2
+export async function upsertConnections(connections_v2: Connection[]): Promise<number> {
     let count = 0;
 
-    for (const conn of connections) {
+    for (const conn of connections_v2) {
         const result = await upsertConnection(conn);
         if (result) count++;
     }

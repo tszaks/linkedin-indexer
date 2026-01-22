@@ -39,7 +39,7 @@ saveBtn.addEventListener('click', async () => {
     statusEl.className = 'status';
 
     try {
-        const response = await fetch(`${pocketbaseUrl}/api/collections/connections/records?perPage=1`);
+        const response = await fetch(`${pocketbaseUrl}/api/collections/connections_v2/records?perPage=1`);
         if (!response.ok) throw new Error('Server not reachable');
 
         // Save config
@@ -68,7 +68,7 @@ scanBtn.addEventListener('click', async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
     if (!tab?.url?.includes('linkedin.com')) {
-        statusEl.textContent = 'Open LinkedIn to scan connections';
+        statusEl.textContent = 'Open LinkedIn to scan connections_v2';
         statusEl.className = 'status disconnected';
         return;
     }
@@ -85,7 +85,7 @@ scanBtn.addEventListener('click', async () => {
                 statusEl.textContent = `Found ${response.found} new connection(s)`;
                 statusEl.className = 'status connected';
             } else {
-                statusEl.textContent = 'No new connections found on this page';
+                statusEl.textContent = 'No new connections_v2 found on this page';
                 statusEl.className = 'status';
             }
         });
