@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dad's Connections Search</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 20px 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: #86868b;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            font-size: 16px;
+            border: none;
+            border-radius: 12px;
+            background: #e8e8ed;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input[type="text"]:focus {
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(0, 125, 250, 0.3);
+        }
+
+        .stats {
+            text-align: center;
+            color: #86868b;
+            font-size: 13px;
+            margin-top: 12px;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .name {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 4px;
+        }
+
+        .title {
+            font-size: 14px;
+            color: #515154;
+            line-height: 1.4;
+        }
+
+        .company {
+            font-size: 14px;
+            color: #0066cc;
+            margin-top: 4px;
+        }
+
+        .location {
+            font-size: 13px;
+            color: #86868b;
+            margin-top: 6px;
+        }
+
+        mark {
+            background: rgba(255, 210, 0, 0.4);
+            color: inherit;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #86868b;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1d1d1f;
+                color: #f5f5f7;
+            }
+
+            header {
+                background: rgba(29, 29, 31, 0.8);
+                border-bottom-color: rgba(255, 255, 255, 0.1);
+            }
+
+            input[type="text"] {
+                background: #2c2c2e;
+                color: #f5f5f7;
+            }
+
+            input[type="text"]:focus {
+                background: #3a3a3c;
+            }
+
+            .card {
+                background: #2c2c2e;
+            }
+
+            .name {
+                color: #f5f5f7;
+            }
+
+            .title {
+                color: #a1a1a6;
+            }
+
+            .company {
+                color: #64acff;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>👔 Dad's Connections</h1>
+            <div class="search-box">
+                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" stroke-width="2" />
+                    <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <input type="text" id="search" placeholder="Search by name, title, company..." autofocus>
+            </div>
+            <div class="stats" id="stats">Loading...</div>
+        </header>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        let connections = [];
+
+        async function loadConnections() {
+            try {
+                const res = await fetch('connections.json');
+                connections = await res.json();
+                updateStats();
+                renderResults(connections);
+            } catch (err) {
+                document.getElementById('stats').textContent = 'Error loading connections';
+                console.error(err);
+            }
+        }
+
+        function updateStats(filtered = null) {
+            const count = filtered !== null ? filtered : connections.length;
+            const total = connections.length;
+            document.getElementById('stats').textContent =
+                filtered !== null
+                    ? `${count} of ${total} connections`
+                    : `${total} connections`;
+        }
+
+        function highlightText(text, query) {
+            if (!query || !text) return text || '';
+            const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+            let result = text;
+            terms.forEach(term => {
+                const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                result = result.replace(regex, '<mark>$1</mark>');
+            });
+            return result;
+        }
+
+        function renderResults(items, query = '') {
+            const container = document.getElementById('results');
+
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">🔍</div>
+                        <p>No connections found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = items.map(c => `
+                <div class="card">
+                    <div class="name">${highlightText(c.name, query)}</div>
+                    <div class="title">${highlightText(c.title || c.headline, query)}</div>
+                    ${c.company ? `<div class="company">${highlightText(c.company, query)}</div>` : ''}
+                    ${c.location ? `<div class="location">${c.location}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function search(query) {
+            if (!query.trim()) {
+                updateStats();
+                renderResults(connections);
+                return;
+            }
+
+            const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+
+            const filtered = connections.filter(c => {
+                const searchText = [c.name, c.title, c.company, c.headline, c.location]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+
+                return terms.every(term => searchText.includes(term));
+            });
+
+            updateStats(filtered.length);
+            renderResults(filtered, query);
+        }
+
+        // Debounced search
+        let searchTimeout;
+        document.getElementById('search').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => search(e.target.value), 150);
+        });
+
+        // Load on start
+        loadConnections();
+    </script>
+</body>
+
+</html>
